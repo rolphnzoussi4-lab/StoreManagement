@@ -1,10 +1,16 @@
 # StoreManagement
 
-Application Windows Forms de gestion de magasin en C#/.NET 8 et SQLite.
+Application Windows Forms de gestion de magasin construite en C#/.NET 8 avec SQLite.
 
-## État
+## Fonctionnalités principales
 
-Le dépôt contient une base applicative avec navigation WinForms, gestion initiale des produits et catégories, mouvements de stock SQLite, ainsi que des écrans d’accueil, ventes et connexion. Les écrans Ventes et Connexion restent des maquettes et ne doivent pas être considérés comme des fonctions de caisse ou d’authentification sécurisées.
+- Dashboard d’accueil
+- Gestion des produits
+- Gestion des catégories
+- Gestion du stock avec mouvements de stock
+- Écran de ventes
+- Écran de connexion
+- Base SQLite pour le stockage local
 
 ## Prérequis
 
@@ -12,10 +18,17 @@ Le dépôt contient une base applicative avec navigation WinForms, gestion initi
 - .NET 8 SDK
 - Visual Studio 2022 avec le workload « Développement Desktop .NET »
 
-## Lancer
+## Démarrage
 
-Ouvrir `StoreManagement.sln` dans Visual Studio, définir `StoreManagement.Presentation` comme projet de démarrage, restaurer les packages puis lancer avec F5.
+1. Ouvrir la solution `StoreManagement.sln`
+2. Définir `StoreManagement.Presentation` comme projet de démarrage
+3. Restaurer les packages NuGet
+4. Lancer avec F5
 
-La base `store.db` est créée dans le dossier de sortie de l’application au premier affichage des pages Produits, Catégories ou Stock. Sauvegarder ce fichier pour conserver les données.
+## Données
 
-> Le dépôt n’inclut pas encore de build Windows CI ni de publication d’installateur. Vérifier la compilation et l’exécution sur Windows avant usage réel.
+La base SQLite est générée dans le dossier de sortie de l’application (`store.db`) lors des premiers accès aux écrans produits, catégories et stock.
+
+## Limite actuelle
+
+Cette application s’inscrit dans une base de gestion de magasin en cours de maturation. Les écrans de caisse et d’authentification restent des modules de démonstration/maquettes, et l’application doit être encore stabilisée et testée en environnement Windows avant un usage réel en production.
