@@ -1,4 +1,3 @@
-using System.Drawing;
 using System.Windows.Forms;
 using StoreManagement.Presentation.Controls;
 using StoreManagement.Presentation.Theme;
@@ -61,8 +60,20 @@ public partial class MainShell : Form
         var productsButton = new ModernButton("Produits");
         productsButton.Click += (_, _) => ShowPage(new ProductsForm());
 
+        var categoriesButton = new ModernButton("Catégories");
+        categoriesButton.Click += (_, _) => ShowPage(new CategoryForm());
+
+        var salesButton = new ModernButton("Ventes");
+        salesButton.Click += (_, _) => ShowPage(new SalesForm());
+
+        var loginButton = new ModernButton("Connexion");
+        loginButton.Click += (_, _) => ShowPage(new LoginForm());
+
         nav.Controls.Add(dashboardButton);
         nav.Controls.Add(productsButton);
+        nav.Controls.Add(categoriesButton);
+        nav.Controls.Add(salesButton);
+        nav.Controls.Add(loginButton);
 
         sidebar.Controls.Add(title);
         sidebar.Controls.Add(nav);
@@ -83,10 +94,12 @@ public partial class MainShell : Form
     private void ShowPage(Form form)
     {
         _contentPanel.Controls.Clear();
+
         form.TopLevel = false;
         form.FormBorderStyle = FormBorderStyle.None;
         form.Dock = DockStyle.Fill;
-        _contentPanel.Controls.Add(form);
         form.Show();
+
+        _contentPanel.Controls.Add(form);
     }
 }

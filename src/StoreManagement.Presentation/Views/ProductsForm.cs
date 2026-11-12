@@ -1,4 +1,6 @@
+using System;
 using System.Drawing;
+using System.Linq;
 using System.Windows.Forms;
 using StoreManagement.Application.Abstractions.Persistence;
 using StoreManagement.Application.Features.Products;
