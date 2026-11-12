@@ -1,10 +1,14 @@
+using System.Drawing;
 using System.Windows.Forms;
+using StoreManagement.Presentation.Controls;
 using StoreManagement.Presentation.Theme;
 
 namespace StoreManagement.Presentation.Views;
 
 public partial class MainShell : Form
 {
+    private readonly Panel _contentPanel;
+
     public MainShell()
     {
         Text = "StoreManagement";
@@ -14,7 +18,7 @@ public partial class MainShell : Form
         BackColor = StorePalette.Background;
         Font = StorePalette.DefaultFont;
 
-        var panel = new TableLayoutPanel
+        var root = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
             BackColor = StorePalette.Background,
@@ -23,8 +27,8 @@ public partial class MainShell : Form
             Padding = new Padding(10)
         };
 
-        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 220F));
-        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+        root.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 220F));
+        root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
 
         var sidebar = new Panel
         {
@@ -46,38 +50,43 @@ public partial class MainShell : Form
         {
             Dock = DockStyle.Fill,
             FlowDirection = FlowDirection.TopDown,
-            AutoSize = false,
             WrapContents = false,
+            AutoSize = false,
             Padding = new Padding(0, 12, 0, 0)
         };
 
-        var products = new ModernButton("Produits", true);
-        products.Click += (_, _) => ShowPage(new ProductsForm());
+        var dashboardButton = new ModernButton("Dashboard", true);
+        dashboardButton.Click += (_, _) => ShowPage(new DashboardForm());
 
-        nav.Controls.Add(products);
-        sidebar.Controls.Add(nav);
+        var productsButton = new ModernButton("Produits");
+        productsButton.Click += (_, _) => ShowPage(new ProductsForm());
+
+        nav.Controls.Add(dashboardButton);
+        nav.Controls.Add(productsButton);
+
         sidebar.Controls.Add(title);
+        sidebar.Controls.Add(nav);
 
-        panel.Controls.Add(sidebar, 0, 0);
+        _contentPanel = new Panel
+        {
+            Dock = DockStyle.Fill,
+            BackColor = StorePalette.Background
+        };
 
-        var content = new Panel { Dock = DockStyle.Fill, BackColor = StorePalette.Background };
-        panel.Controls.Add(content, 1, 0);
+        root.Controls.Add(sidebar, 0, 0);
+        root.Controls.Add(_contentPanel, 1, 0);
+        Controls.Add(root);
 
-        Controls.Add(panel);
+        ShowPage(new DashboardForm());
     }
 
     private void ShowPage(Form form)
     {
-        if (Controls.Count > 0) { }
-        var current = Controls[0] as TableLayoutPanel;
-        if (current is null) return;
-
-        var content = current.GetControlFromPosition(1, 0);
-        content.Controls.Clear();
+        _contentPanel.Controls.Clear();
         form.TopLevel = false;
         form.FormBorderStyle = FormBorderStyle.None;
         form.Dock = DockStyle.Fill;
-        content.Controls.Add(form);
+        _contentPanel.Controls.Add(form);
         form.Show();
     }
 }

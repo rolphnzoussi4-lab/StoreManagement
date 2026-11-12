@@ -1,4 +1,6 @@
+using System;
 using System.Windows.Forms;
+using StoreManagement.Presentation.Views;
 
 namespace StoreManagement.Presentation;
 
@@ -8,6 +10,6 @@ public static class Program
     public static void Main()
     {
         ApplicationConfiguration.Initialize();
-        Application.Run(new MainForm());
+        Application.Run(new MainShell());
     }
 }
