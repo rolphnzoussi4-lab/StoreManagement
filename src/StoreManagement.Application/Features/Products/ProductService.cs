@@ -40,6 +40,7 @@ public sealed class ProductService
 
         var current = await _products.GetByIdAsync(productId, cancellationToken)
             ?? throw new KeyNotFoundException($"Produit {productId} introuvable.");
+
         var updated = CreateProduct(draft, current);
         await EnsureActiveCategoryAsync(updated.CategoryId, cancellationToken);
 
@@ -55,7 +56,8 @@ public sealed class ProductService
         var product = await _products.GetByIdAsync(productId, cancellationToken)
             ?? throw new KeyNotFoundException($"Produit {productId} introuvable.");
 
-        if (!product.IsActive) return;
+        if (!product.IsActive)
+            return;
 
         await _products.UpdateAsync(new Product
         {
@@ -96,6 +98,7 @@ public sealed class ProductService
             CreatedAtUtc = existing?.CreatedAtUtc ?? DateTimeOffset.UtcNow,
             ModifiedAtUtc = DateTimeOffset.UtcNow
         };
+
         product.Validate();
         return product;
     }

@@ -8,10 +8,13 @@ public sealed class SQLiteConnectionFactory
 
     public SQLiteConnectionFactory(string databasePath)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(databasePath);
+        if (string.IsNullOrWhiteSpace(databasePath))
+            throw new ArgumentException("Le chemin de base de données est obligatoire.", nameof(databasePath));
+
         DatabasePath = Path.GetFullPath(databasePath);
         var directory = Path.GetDirectoryName(DatabasePath);
-        if (!string.IsNullOrEmpty(directory)) Directory.CreateDirectory(directory);
+        if (!string.IsNullOrEmpty(directory))
+            Directory.CreateDirectory(directory);
 
         _connectionString = new SqliteConnectionStringBuilder
         {

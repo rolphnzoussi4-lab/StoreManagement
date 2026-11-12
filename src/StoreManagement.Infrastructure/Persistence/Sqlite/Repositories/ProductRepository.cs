@@ -1,6 +1,5 @@
 using Microsoft.Data.Sqlite;
 using StoreManagement.Application.Abstractions.Persistence;
-using StoreManagement.Application.Features.Products;
 using StoreManagement.Domain.Entities;
 
 namespace StoreManagement.Infrastructure.Persistence.Sqlite.Repositories;
@@ -9,25 +8,38 @@ public sealed class ProductRepository : IProductRepository
 {
     private readonly SQLiteConnectionFactory _connections;
 
-    public ProductRepository(SQLiteConnectionFactory connections) =>
-        _connections = connections ?? throw new ArgumentNullException(nameof(connections));
-
-    public Task<Product?> GetByIdAsync(long productId, CancellationToken cancellationToken = default) =>
-        GetOneAsync("produit_id = $id", "$id", productId, cancellationToken);
-
-    public Task<Product?> GetBySkuAsync(string sku, CancellationToken cancellationToken = default)
+    public ProductRepository(SQLiteConnectionFactory connections)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(sku);
-        return GetOneAsync("sku = $sku COLLATE NOCASE", "$sku", sku.Trim(), cancellationToken);
+        _connections = connections ?? throw new ArgumentNullException(nameof(connections));
+    }
+
+    public async Task<Product?> GetByIdAsync(long productId, CancellationToken cancellationToken = default)
+    {
+        await using var connection = await _connections.CreateOpenConnectionAsync(cancellationToken);
+        await using var command = connection.CreateCommand();
+        command.CommandText = "SELECT produit_id, categorie_id, sku, nom, description, prix_vente_centimes, cout_achat_centimes, seuil_alerte_stock, est_actif, cree_le_utc, modifie_le_utc FROM Produit WHERE produit_id = $id;";
+        command.Parameters.AddWithValue("$id", productId);
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        return await reader.ReadAsync(cancellationToken) ? Map(reader) : null;
+    }
+
+    public async Task<Product?> GetBySkuAsync(string sku, CancellationToken cancellationToken = default)
+    {
+        await using var connection = await _connections.CreateOpenConnectionAsync(cancellationToken);
+        await using var command = connection.CreateCommand();
+        command.CommandText = "SELECT produit_id, categorie_id, sku, nom, description, prix_vente_centimes, cout_achat_centimes, seuil_alerte_stock, est_actif, cree_le_utc, modifie_le_utc FROM Produit WHERE sku = $sku COLLATE NOCASE;";
+        command.Parameters.AddWithValue("$sku", sku.Trim());
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        return await reader.ReadAsync(cancellationToken) ? Map(reader) : null;
     }
 
     public async Task<IReadOnlyList<Product>> SearchAsync(ProductFilter filter, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(filter);
-        var conditions = new List<string>();
         await using var connection = await _connections.CreateOpenConnectionAsync(cancellationToken);
         await using var command = connection.CreateCommand();
 
+        var conditions = new List<string>();
         if (!string.IsNullOrWhiteSpace(filter.SearchText))
         {
             conditions.Add("(sku LIKE $search COLLATE NOCASE OR nom LIKE $search COLLATE NOCASE)");
@@ -44,18 +56,14 @@ public sealed class ProductRepository : IProductRepository
             command.Parameters.AddWithValue("$isActive", filter.IsActive.Value ? 1 : 0);
         }
 
-        var where = conditions.Count == 0 ? string.Empty : "WHERE " + string.Join(" AND ", conditions);
-        command.CommandText = $"""
-            SELECT produit_id, categorie_id, sku, nom, description,
-                   prix_vente_centimes, cout_achat_centimes, seuil_alerte_stock,
-                   est_actif, cree_le_utc, modifie_le_utc
-            FROM Produit {where}
-            ORDER BY nom COLLATE NOCASE;
-            """;
+        var where = conditions.Count > 0 ? "WHERE " + string.Join(" AND ", conditions) : string.Empty;
+        command.CommandText = $"SELECT produit_id, categorie_id, sku, nom, description, prix_vente_centimes, cout_achat_centimes, seuil_alerte_stock, est_actif, cree_le_utc, modifie_le_utc FROM Produit {where} ORDER BY nom COLLATE NOCASE;";
 
         var products = new List<Product>();
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-        while (await reader.ReadAsync(cancellationToken)) products.Add(Map(reader));
+        while (await reader.ReadAsync(cancellationToken))
+            products.Add(Map(reader));
+
         return products;
     }
 
@@ -63,17 +71,11 @@ public sealed class ProductRepository : IProductRepository
     {
         ArgumentNullException.ThrowIfNull(product);
         product.Validate();
+
         await using var connection = await _connections.CreateOpenConnectionAsync(cancellationToken);
         await using var command = connection.CreateCommand();
-        command.CommandText = """
-            INSERT INTO Produit
-                (categorie_id, sku, nom, description, prix_vente_centimes,
-                 cout_achat_centimes, stock_quantite, seuil_alerte_stock,
-                 est_actif, cree_le_utc, modifie_le_utc)
-            VALUES ($categoryId, $sku, $name, $description, $price,
-                    $cost, 0, $threshold, $active, $created, $modified);
-            """;
-        AddProductParameters(command, product);
+        command.CommandText = "INSERT INTO Produit (categorie_id, sku, nom, description, prix_vente_centimes, cout_achat_centimes, stock_quantite, seuil_alerte_stock, est_actif, cree_le_utc, modifie_le_utc) VALUES ($categoryId, $sku, $name, $description, $salePrice, $purchaseCost, 0, $threshold, $isActive, $createdAt, $modifiedAt);";
+        AddParameters(command, product);
         await command.ExecuteNonQueryAsync(cancellationToken);
         return connection.LastInsertRowId;
     }
@@ -82,48 +84,29 @@ public sealed class ProductRepository : IProductRepository
     {
         ArgumentNullException.ThrowIfNull(product);
         product.Validate();
+
         await using var connection = await _connections.CreateOpenConnectionAsync(cancellationToken);
         await using var command = connection.CreateCommand();
-        command.CommandText = """
-            UPDATE Produit SET categorie_id = $categoryId, sku = $sku, nom = $name,
-                description = $description, prix_vente_centimes = $price,
-                cout_achat_centimes = $cost, seuil_alerte_stock = $threshold,
-                est_actif = $active, modifie_le_utc = $modified
-            WHERE produit_id = $id;
-            """;
-        AddProductParameters(command, product);
+        command.CommandText = "UPDATE Produit SET categorie_id = $categoryId, sku = $sku, nom = $name, description = $description, prix_vente_centimes = $salePrice, cout_achat_centimes = $purchaseCost, seuil_alerte_stock = $threshold, est_actif = $isActive, modifie_le_utc = $modifiedAt WHERE produit_id = $id;";
+        AddParameters(command, product);
         command.Parameters.AddWithValue("$id", product.ProductId);
+
         if (await command.ExecuteNonQueryAsync(cancellationToken) == 0)
             throw new KeyNotFoundException($"Produit {product.ProductId} introuvable.");
     }
 
-    private async Task<Product?> GetOneAsync(string predicate, string parameter, object value, CancellationToken cancellationToken)
-    {
-        await using var connection = await _connections.CreateOpenConnectionAsync(cancellationToken);
-        await using var command = connection.CreateCommand();
-        command.CommandText = $"""
-            SELECT produit_id, categorie_id, sku, nom, description,
-                   prix_vente_centimes, cout_achat_centimes, seuil_alerte_stock,
-                   est_actif, cree_le_utc, modifie_le_utc
-            FROM Produit WHERE {predicate};
-            """;
-        command.Parameters.AddWithValue(parameter, value);
-        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-        return await reader.ReadAsync(cancellationToken) ? Map(reader) : null;
-    }
-
-    private static void AddProductParameters(SqliteCommand command, Product product)
+    private static void AddParameters(SqliteCommand command, Product product)
     {
         command.Parameters.AddWithValue("$categoryId", product.CategoryId);
         command.Parameters.AddWithValue("$sku", product.Sku);
         command.Parameters.AddWithValue("$name", product.Name);
         command.Parameters.AddWithValue("$description", (object?)product.Description ?? DBNull.Value);
-        command.Parameters.AddWithValue("$price", product.SalePriceCents);
-        command.Parameters.AddWithValue("$cost", (object?)product.PurchaseCostCents ?? DBNull.Value);
+        command.Parameters.AddWithValue("$salePrice", product.SalePriceCents);
+        command.Parameters.AddWithValue("$purchaseCost", (object?)product.PurchaseCostCents ?? DBNull.Value);
         command.Parameters.AddWithValue("$threshold", product.StockAlertThreshold);
-        command.Parameters.AddWithValue("$active", product.IsActive ? 1 : 0);
-        command.Parameters.AddWithValue("$created", ToDatabaseDate(product.CreatedAtUtc));
-        command.Parameters.AddWithValue("$modified", ToDatabaseDate(product.ModifiedAtUtc));
+        command.Parameters.AddWithValue("$isActive", product.IsActive ? 1 : 0);
+        command.Parameters.AddWithValue("$createdAt", ToDatabaseDate(product.CreatedAtUtc));
+        command.Parameters.AddWithValue("$modifiedAt", ToDatabaseDate(product.ModifiedAtUtc));
     }
 
     private static Product Map(SqliteDataReader reader) => new()
