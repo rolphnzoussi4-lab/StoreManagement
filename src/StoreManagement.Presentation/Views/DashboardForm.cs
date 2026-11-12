@@ -10,7 +10,9 @@ public sealed class DashboardForm : Form
         Text = "Dashboard";
         StartPosition = FormStartPosition.CenterParent;
         BackColor = StorePalette.Background;
+        Font = StorePalette.DefaultFont;
 
+        var panel = new Panel { Dock = DockStyle.Fill, BackColor = StorePalette.Background, Padding = new Padding(24) };
         var label = new Label
         {
             Text = "Tableau de bord\nStoreManagement",
@@ -20,6 +22,7 @@ public sealed class DashboardForm : Form
             ForeColor = StorePalette.Primary
         };
 
-        Controls.Add(label);
+        panel.Controls.Add(label);
+        Controls.Add(panel);
     }
 }
