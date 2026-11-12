@@ -11,6 +11,7 @@ public sealed class Product
     public string? Description { get; init; }
     public long SalePriceCents { get; init; }
     public long? PurchaseCostCents { get; init; }
+    public int StockQuantity { get; init; }
     public int StockAlertThreshold { get; init; }
     public bool IsActive { get; init; } = true;
     public DateTimeOffset CreatedAtUtc { get; init; } = DateTimeOffset.UtcNow;

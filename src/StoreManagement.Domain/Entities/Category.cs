@@ -8,6 +8,7 @@ public sealed class Category
     public string Name { get; init; } = string.Empty;
     public string? Description { get; init; }
     public bool IsActive { get; init; } = true;
+    public DateTimeOffset CreatedAtUtc { get; init; } = DateTimeOffset.UtcNow;
 
     public void Validate()
     {
