@@ -17,7 +17,7 @@ public sealed class ProductRepository : IProductRepository
     {
         await using var connection = await _connections.CreateOpenConnectionAsync(cancellationToken);
         await using var command = connection.CreateCommand();
-        command.CommandText = "SELECT produit_id, categorie_id, sku, nom, description, prix_vente_centimes, cout_achat_centimes, seuil_alerte_stock, est_actif, cree_le_utc, modifie_le_utc FROM Produit WHERE produit_id = $id;";
+        command.CommandText = "SELECT produit_id, categorie_id, sku, nom, description, prix_vente_centimes, cout_achat_centimes, stock_quantite, seuil_alerte_stock, est_actif, cree_le_utc, modifie_le_utc FROM Produit WHERE produit_id = $id;";
         command.Parameters.AddWithValue("$id", productId);
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         return await reader.ReadAsync(cancellationToken) ? Map(reader) : null;
@@ -27,7 +27,7 @@ public sealed class ProductRepository : IProductRepository
     {
         await using var connection = await _connections.CreateOpenConnectionAsync(cancellationToken);
         await using var command = connection.CreateCommand();
-        command.CommandText = "SELECT produit_id, categorie_id, sku, nom, description, prix_vente_centimes, cout_achat_centimes, seuil_alerte_stock, est_actif, cree_le_utc, modifie_le_utc FROM Produit WHERE sku = $sku COLLATE NOCASE;";
+        command.CommandText = "SELECT produit_id, categorie_id, sku, nom, description, prix_vente_centimes, cout_achat_centimes, stock_quantite, seuil_alerte_stock, est_actif, cree_le_utc, modifie_le_utc FROM Produit WHERE sku = $sku;";
         command.Parameters.AddWithValue("$sku", sku.Trim());
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         return await reader.ReadAsync(cancellationToken) ? Map(reader) : null;
@@ -57,7 +57,7 @@ public sealed class ProductRepository : IProductRepository
         }
 
         var where = conditions.Count > 0 ? "WHERE " + string.Join(" AND ", conditions) : string.Empty;
-        command.CommandText = $"SELECT produit_id, categorie_id, sku, nom, description, prix_vente_centimes, cout_achat_centimes, seuil_alerte_stock, est_actif, cree_le_utc, modifie_le_utc FROM Produit {where} ORDER BY nom COLLATE NOCASE;";
+        command.CommandText = $"SELECT produit_id, categorie_id, sku, nom, description, prix_vente_centimes, cout_achat_centimes, stock_quantite, seuil_alerte_stock, est_actif, cree_le_utc, modifie_le_utc FROM Produit {where} ORDER BY nom COLLATE NOCASE;";
 
         var products = new List<Product>();
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
@@ -74,7 +74,7 @@ public sealed class ProductRepository : IProductRepository
 
         await using var connection = await _connections.CreateOpenConnectionAsync(cancellationToken);
         await using var command = connection.CreateCommand();
-        command.CommandText = "INSERT INTO Produit (categorie_id, sku, nom, description, prix_vente_centimes, cout_achat_centimes, stock_quantite, seuil_alerte_stock, est_actif, cree_le_utc, modifie_le_utc) VALUES ($categoryId, $sku, $name, $description, $salePrice, $purchaseCost, 0, $threshold, $isActive, $createdAt, $modifiedAt);";
+        command.CommandText = "INSERT INTO Produit (categorie_id, sku, nom, description, prix_vente_centimes, cout_achat_centimes, stock_quantite, seuil_alerte_stock, est_actif, cree_le_utc, modifie_le_utc) VALUES ($categoryId, $sku, $name, $description, $salePrice, $purchaseCost, $stockQuantity, $threshold, $isActive, $createdAt, $modifiedAt);";
         AddParameters(command, product);
         await command.ExecuteNonQueryAsync(cancellationToken);
         return connection.LastInsertRowId;
@@ -87,7 +87,7 @@ public sealed class ProductRepository : IProductRepository
 
         await using var connection = await _connections.CreateOpenConnectionAsync(cancellationToken);
         await using var command = connection.CreateCommand();
-        command.CommandText = "UPDATE Produit SET categorie_id = $categoryId, sku = $sku, nom = $name, description = $description, prix_vente_centimes = $salePrice, cout_achat_centimes = $purchaseCost, seuil_alerte_stock = $threshold, est_actif = $isActive, modifie_le_utc = $modifiedAt WHERE produit_id = $id;";
+        command.CommandText = "UPDATE Produit SET categorie_id = $categoryId, sku = $sku, nom = $name, description = $description, prix_vente_centimes = $salePrice, cout_achat_centimes = $purchaseCost, stock_quantite = $stockQuantity, seuil_alerte_stock = $threshold, est_actif = $isActive, modifie_le_utc = $modifiedAt WHERE produit_id = $id;";
         AddParameters(command, product);
         command.Parameters.AddWithValue("$id", product.ProductId);
 
@@ -103,6 +103,7 @@ public sealed class ProductRepository : IProductRepository
         command.Parameters.AddWithValue("$description", (object?)product.Description ?? DBNull.Value);
         command.Parameters.AddWithValue("$salePrice", product.SalePriceCents);
         command.Parameters.AddWithValue("$purchaseCost", (object?)product.PurchaseCostCents ?? DBNull.Value);
+        command.Parameters.AddWithValue("$stockQuantity", product.StockQuantity);
         command.Parameters.AddWithValue("$threshold", product.StockAlertThreshold);
         command.Parameters.AddWithValue("$isActive", product.IsActive ? 1 : 0);
         command.Parameters.AddWithValue("$createdAt", ToDatabaseDate(product.CreatedAtUtc));
@@ -118,10 +119,11 @@ public sealed class ProductRepository : IProductRepository
         Description = reader.IsDBNull(4) ? null : reader.GetString(4),
         SalePriceCents = reader.GetInt64(5),
         PurchaseCostCents = reader.IsDBNull(6) ? null : reader.GetInt64(6),
-        StockAlertThreshold = reader.GetInt32(7),
-        IsActive = reader.GetInt32(8) == 1,
-        CreatedAtUtc = ReadDate(reader.GetString(9)),
-        ModifiedAtUtc = ReadDate(reader.GetString(10))
+        StockQuantity = reader.GetInt32(7),
+        StockAlertThreshold = reader.GetInt32(8),
+        IsActive = reader.GetInt32(9) == 1,
+        CreatedAtUtc = ReadDate(reader.GetString(10)),
+        ModifiedAtUtc = ReadDate(reader.GetString(11))
     };
 
     private static string ToDatabaseDate(DateTimeOffset value) =>
